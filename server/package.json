@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "start": "node app",
+    "dev": "nodemon app"
+  },
+  "name": "todo-app",
+  "version": "1.0.0",
+  "description": "todo-app",
+  "main": "app.js",
+  "type": "module",
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  }
+}
