@@ -1,104 +1,117 @@
-// src/App.jsx
 import { useState, useEffect } from "react";
-import "./app.css";
-
-// Utiliser la variable d'environnement pour l'URL de l'API
-// const API_URL = process.env.VITE_API_URL;
-// console.log('API_URL:', API_URL)
+import './App.css';
 
 function App() {
   const [tasks, setTasks] = useState([]);
   const [newTask, setNewTask] = useState("");
+  const [updateTask, setUpdateTask] = useState({ id: null, text: "" });
 
   useEffect(() => {
-    fetch(`/api/tasks`)
-      .then((res) => res.json())
-      .then((data) => {
-        setTasks(data);
-      });
+    fetchTasks();
   }, []);
 
-  function handleAddTask() {
-    if (!newTask) {
-      alert("Please enter a task");
-      return;
-    }
-    fetch(`/api/tasks`, {
+  const fetchTasks = async () => {
+    const res = await fetch("/api/tasks");
+    const data = await res.json();
+    setTasks(data);
+  };
+
+  // Fonction pour ajouter une nouvelle tâche
+  const addTask = async () => {
+    if (newTask.trim() === "") return; // Vérification que la nouvelle tâche n'est pas vide
+    const res = await fetch("/api/tasks", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title: newTask, completed: false }),
-    })
-      .then((res) => res.json())
-      .then((task) => {
-        setTasks([...tasks, task]);
-        setNewTask("");
-      });
-  }
+      body: JSON.stringify({ text: newTask, status: "pending" }), // Envoi de la nouvelle tâche au serveur
+    });
+    if (res.ok) {
+      setNewTask(""); // Réinitialisation du champ de saisie
+      fetchTasks(); // Récupération des tâches mises à jour
+    }
+  };
 
-  function handleToggleTask(id) {
-    const task = tasks.find((task) => task._id === id);
-    fetch(`/api/tasks/${id}`, {
+  // Fonction pour mettre à jour une tâche existante
+  const editTask = async (id) => {
+    const res = await fetch(`/api/tasks/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ ...task, completed: !task.completed }),
-    })
-      .then((res) => res.json())
-      .then((updatedTask) => {
-        console.log('updatedTask:', updatedTask)
-        setTasks((prevTasks) => prevTasks.map((task) => (task._id === id ? { ...updatedTask, completed: !updatedTask.completed } : task)));
-      });
-  }
-
-  function handleDeleteTask(id) {
-    fetch(`/api/tasks/${id}`, { method: "DELETE" }).then(() => {
-      setTasks(tasks.filter((task) => task._id !== id));
+      body: JSON.stringify({ text: updateTask.text }), // Envoi des nouvelles données de la tâche au serveur
     });
-  }
+    if (res.ok) {
+      setUpdateTask({ id: null, text: "" }); // Réinitialisation de l'état de mise à jour
+      fetchTasks(); // Récupération des tâches mises à jour
+    }
+  };
 
-  function renderTasks() {
+  // Fonction pour supprimer une tâche
+  const deleteTask = async (id) => {
+    const res = await fetch(`/api/tasks/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      fetchTasks(); // Récupération des tâches mises à jour
+    }
+  };
+
+  const renderTasks = () => {
     return tasks.map((task) => (
-      <li key={task._id} className="flex items-center gap-8">
-        <span
-          style={{ textDecoration: task.completed ? "line-through" : "none" }}
-          onClick={() => handleToggleTask(task._id)}
-          className="cursor-pointer flex-1"
-        >
-          {task.title}
-        </span>
-        <button
-          onClick={() => handleDeleteTask(task._id)}
-          className="cursor-pointer"
-        >
-          Delete
-        </button>
-      </li>
-    ));
-  }
-
-  return (
-    <main className="mw-420 m-auto p-16 flex flex-col gap-16">
-      <div className="p-16 shadow rounded-16">
-        <h1>Todo List</h1>
-        <div className="flex items-center">
-          <input
-            value={newTask}
-            onChange={(e) => setNewTask(e.target.value)}
-            placeholder="New task"
-            className="flex-1 p-8"
-          />
-          <button onClick={handleAddTask} className="p-8 cursor-pointer">
-            Add Task
+      <li key={task._id} className="flex justify-between items-center p-2 border-b border-gray-200">
+        <span>{task.text}, status : {task.status}</span>
+        <div>
+          <button
+            className="  px-2 py-1 rounded mr-2 "
+            onClick={() => setUpdateTask({ id: task._id, text: task.text })}
+          >
+            Edit
+          </button>
+          <button
+            className=" px-2 py-1 rounded "
+            onClick={() => deleteTask(task._id)}
+          >
+            Delete
           </button>
         </div>
+      </li>
+    ));
+  };
+
+  return (
+    <main className="container  mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4 ">Todo List</h1>
+      <div className="mb-4 m-4">
+        <input
+          type="text"
+          value={newTask}
+          onChange={(e) => setNewTask(e.target.value)}
+          placeholder="New task"
+          className="border rounded p-2 w-full"
+        />
+        <button
+          className="  px-4 py-2 rounded mt-2 "
+          onClick={addTask}
+        >
+          Add Task
+        </button>
       </div>
-      {tasks.length > 0 ? (
-        <ul className="flex flex-col gap-8 p-16">{renderTasks()}</ul>
-      ) : (
-        <p className="p-16">No tasks yet</p>
+      <ul className="list-disc pl-5">{renderTasks()}</ul>
+      {updateTask.id && (
+        <div className="mt-4">
+          <input
+            type="text"
+            value={updateTask.text}
+            onChange={(e) => setUpdateTask({ ...updateTask, text: e.target.value })}
+            placeholder="Update task"
+            className="border rounded p-2 w-full"
+          />
+          <button
+            className="  px-4 py-2 rounded mt-2 "
+            onClick={() => editTask(updateTask.id)}
+          >
+            Update Task
+          </button>
+        </div>
       )}
     </main>
   );
